@@ -280,3 +280,21 @@ def flex_window_patEx(sent,tag_list,window_size=5,stop_words=False):
                 ind=align_window(j,window_size,len(dep))
                 ret_list.append(tag[ind[0]:ind[1]])
     return ret_list
+#input iplist->list or nested list of patterns
+#output dictionary number of elements
+def counting_elements(ip_list):
+    import itertools
+    sl=list(itertools.chain(*ip_list))
+    count_dict={}
+    for i in sl:
+        if i not in count_dict:
+            count_dict[i]=1
+        else:
+            count_dict[i]=count_dict[i]+1
+    return count_dict
+#input x->int
+#input y->int
+#output int
+#note 2.718 refers euler constant 'e'
+def scoring(x,y):
+    return 2.718**x/(2.718**x+2.718**y)

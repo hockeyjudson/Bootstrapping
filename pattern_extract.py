@@ -238,7 +238,7 @@ def jaro_winkler(s,t,l=3,p=0.1):
 #input list_pattern-> 2d list list of pattern
 #output dictionary with  keys{avg:average value,min:minimum value,max:maximum value }
 def avg_jaro_score(ref_pattern,list_pattern):
-    score=[pe.jaro(ref_pattern,i) for i in list_pattern]
+    score=[jaro(ref_pattern,i) for i in list_pattern]
     score_dict={}
     score_dict['avg']=sum(score)/len(score)
     score_dict['min']=min(score)
@@ -273,13 +273,17 @@ def flex_window_patEx(sent,tag_list,window_size=5,stop_words=False):
     word=tptfrm[0]
     dep=tptfrm[1]
     tag=tptfrm[2]
-    ret_list=[]
+    retdict={}
     for i in tag_list:
         for j,k in enumerate(dep):
             if k==i and tag[j]!='CD':
-                ind=align_window(j,window_size,len(dep))
-                ret_list.append(tag[ind[0]:ind[1]])
-    return ret_list
+                if i not in retdict:
+                    ind=align_window(j,window_size,len(dep))
+                    retdict[i]=[tag[ind[0]:ind[1]]]
+                else:
+                    ind=align_window(j,window_size,len(dep))
+                    retdict[i].append(tag[ind[0]:ind[1]])
+    return retdict
 #input iplist->list or nested list of patterns
 #output dictionary number of elements
 def counting_elements(ip_list):
@@ -298,3 +302,70 @@ def counting_elements(ip_list):
 #note 2.718 refers euler constant 'e'
 def scoring(x,y):
     return 2.718**x/(2.718**x+2.718**y)
+def pattern_tagger(file_name,pat,tag,window_size=6,stop_words=True):
+    import os
+    pat_collect=[]
+    new_list=[]
+    flag=0
+    sent_list=open(file_name,"r").readlines()
+    for i in sent_list:
+        ls=triples(i.strip(),stop_words)
+        print(ls)
+        max=0.0
+        dt={"pat":[],"score":0.0}
+        for j in range(len(ls[1])-window_size+1):
+            sc=jaro(ls[1][j:j+window_size],pat)
+            #print(sc,ls[1][j:j+window_size])
+            if sc>max:
+                max=sc
+                dt["pat"]=ls[1][j:j+window_size]
+                dt["score"]=sc
+                print(dt)
+        if dt["score"]==1.0:
+            flag=1
+            i=i.strip()+" "+tag+" \n"
+            new_list.append(i)
+        elif .87<dt["score"]<1.0:
+            pat_collect.append(dt)
+            new_list.append(i)
+        else:
+            new_list.append(i)
+    """if flag==1:
+        os.remove(file_name)
+        f=open(file_name,"a")
+        for i in new_list:
+            f.write(i)
+        f.close()"""
+    return [flag,new_list,pat_collect]
+#sd->list(1d) of patterns to be count
+#c->count dictionary stored in pickle file:count_element.pickle
+#tag->string (dictionary key such as arguments.pickle,facts.pickle,identify.pickle,ratio.pickle,decision.pickle)
+#output dict with element and its counts
+def element_counter(sd,c,tag):
+    dt={}
+    for i in sd:
+        dt[i]={}
+    for i in sd:
+        dt[i]["x"]=0
+        dt[i]["y"]=0
+        for j in c.keys():
+            if j==tag:
+                if i not in c[j]:
+                    dt[i]["x"]=0
+                else:
+                    dt[i]["x"]=c[j][i]
+            else:
+                if i not in c[j]:
+                    dt[i]["y"]=dt[i]["y"]+0
+                else:
+                    dt[i]["y"]=dt[i]["y"]+c[j][i]
+    return dt
+#dict_ele_count->dict input the value from element_counter function
+#element_counter(element_counter(sd[0],c,"arguments.pickle"))
+#output list[dict->element with values,string->element with the lowest score
+def score_min_val(dict_ele_count):
+    score={}
+    for i,j in dict_ele_count.items():
+        score[i]=scoring(*list(j.values()))
+    return [score,min(score, key=lambda k: score[k])]
+    

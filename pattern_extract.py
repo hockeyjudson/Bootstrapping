@@ -360,12 +360,57 @@ def element_counter(sd,c,tag):
                 else:
                     dt[i]["y"]=dt[i]["y"]+c[j][i]
     return dt
-#dict_ele_count->dict input the value from element_counter function
-#element_counter(element_counter(sd[0],c,"arguments.pickle"))
+#input dict_ele_count->dict input the value from element_counter function
+#input element_counter(element_counter(sd[0],c,"arguments.pickle"))
 #output list[dict->element with values,string->element with the lowest score
 def score_min_val(dict_ele_count):
     score={}
     for i,j in dict_ele_count.items():
         score[i]=scoring(*list(j.values()))
     return [score,min(score, key=lambda k: score[k])]
-    
+#input element->string tag going to match in the initial position of the list
+#input pat_list->list list of patterns
+#output list->id list which return dictionary of elements and its count and elemant with the maximum count
+def count_intial(element,pat_list):
+    dct={}
+    for i in pat_list:
+        if element==i[1]:
+            if i[0] not in dct:
+                dct[i[0]]=1
+            else:
+                dct[i[0]]=dct[i[0]]+1
+    if dct=={}:
+        return 0
+    else:
+        return [dct,max(dct, key=lambda k: dct[k])]
+#input element->string tag going to match in the final position of the list
+#input pat_list->list list of patterns
+#output list->id list which return dictionary of elements and its count and elemant with the maximum count
+def count_final(element,pat_list):
+    dct={}
+    for i in pat_list:
+        if i[-2]==element:
+            if i[-1] not in dct:
+                dct[i[-1]]=1
+            else:
+                dct[i[-1]]=dct[i[-1]]+1
+    if dct=={}:
+        return 0
+    else:
+        return [dct,max(dct, key=lambda k: dct[k])]  
+#input elements->list of tag going 
+#input pat_list->list list of patterns
+#output list->id list which return dictionary of elements and its count and elemant with the maximum count
+def count_pair(elements,pat_list):
+    dct={}
+    for i in pat_list:
+        for j,k in enumerate(i[:-2]):
+            if k==elements[0] and elements[1]==i[j+2]:
+                if i[j+1] not in dct:
+                    dct[i[j+1]]=1
+                else:
+                    dct[i[j+1]]=dct[i[j+1]]+1
+    if dct=={}:
+        return 0
+    else:
+        return [dct,max(dct, key=lambda k: dct[k])]

@@ -337,9 +337,9 @@ def pattern_tagger(file_name,pat,tag,window_size=6,stop_words=True):
             f.write(i)
         f.close()"""
     return [flag,new_list,pat_collect]
-#sd->list(1d) of patterns to be count
-#c->count dictionary stored in pickle file:count_element.pickle
-#tag->string (dictionary key such as arguments.pickle,facts.pickle,identify.pickle,ratio.pickle,decision.pickle)
+#input sd->list(1d) of patterns to be count
+#input c->count dictionary stored in pickle file:count_element.pickle
+#input tag->string (dictionary key such as arguments.pickle,facts.pickle,identify.pickle,ratio.pickle,decision.pickle)
 #output dict with element and its counts
 def element_counter(sd,c,tag):
     dt={}
@@ -414,3 +414,29 @@ def count_pair(elements,pat_list):
         return 0
     else:
         return [dct,max(dct, key=lambda k: dct[k])]
+#input pat->list(1d list of elements)
+#input pat_list->list of patterns
+#input tag->string (dictionary key such as arguments.pickle,facts.pickle,identify.pickle,ratio.pickle,decision.pickle)
+#input pat_list1->dict elements with count
+#output modified pattern or else string with neglected pattern
+def pattern_modify(pat,pat_list,tag,pat_list1):
+    dct=element_counter(pat,pat_list1,tag)
+    print(dct)
+    dct_min=score_min_val(dct)
+    print(dct_min)
+    ele=[]
+    for i,j in enumerate(pat):
+        if dct_min[1]==pat[i]:
+            if i==0:
+                ele.append([count_intial(pat[1],pat_list),i])
+            elif i==len(pat)-1:
+                ele.append([count_final(pat[-2],pat_list),i])
+            else:
+                ele.append([count_pair([pat[i-1],pat[i+1]],pat_list),i])
+    print(ele)
+    if 0 in ele:
+        return "pattern neglected"
+    else:
+        for i in ele:
+            pat[i[1]]=i[0][1]
+    return pat

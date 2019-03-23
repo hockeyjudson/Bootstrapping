@@ -169,6 +169,27 @@ def triples(sent,s_words=False):
             dep.append(i.dep_)
             tag.append(i.tag_)
     return [word,dep,tag]
+#input sent_obj->spacy obj as spacy obj
+#input s_words as boolean
+#output list(word,dep,pos tag)
+def opt_triples(sent_obj,s_words=False):
+    from nltk.corpus import stopwords
+    sw=stopwords.words('english')
+    word=[]
+    dep=[]
+    tag=[]
+    if s_words:
+        for i in sent_obj:
+            if i.lower_ not in sw and i.dep_!="punct":
+                word.append(i.text)
+                dep.append(i.dep_)
+                tag.append(i.tag_)
+    else:
+        for i in sent_obj:
+            word.append(i.text)
+            dep.append(i.dep_)
+            tag.append(i.tag_)
+    return [word,dep,tag]
 #input triplet form list
 #output three list(words,dep,pos)
 def parse_triplet(lst):
@@ -300,43 +321,66 @@ def counting_elements(ip_list):
 #input y->int
 #output int
 #note 2.718 refers euler constant 'e'
+#note e^x/(e^x+e^y)
 def scoring(x,y):
     return 2.718**x/(2.718**x+2.718**y)
-def pattern_tagger(file_name,pat,tag,window_size=6,stop_words=True):
+#input file_name->string
+#input pat->list 1d list of patterns
+#input tag->string labl to tagged with sentence
+#input window_size->int by default 6
+#input pattern_score->float by default .87
+#input stop_words->boolean by default True
+#output dictinary or string and if changes one text file will be modified
+def pattern_tagger(file_name,pat,tag,window_size=6,pattern_score=.87,stop_words=True):
     import os
+    import pickle
+    tags=["<arguments>","<identify>","<facts>","<decision>","<ratio>"]
+    print("@"+file_name+"\n")
+    pick_fl="/home/judson/Desktop/sentenceSeg/clean_sent_spacy/"+file_name.split("/")[-1].split(".")[0]+".pickle"
     pat_collect=[]
     new_list=[]
+    tagged_sent=[]
     flag=0
     sent_list=open(file_name,"r").readlines()
-    for i in sent_list:
-        ls=triples(i.strip(),stop_words)
-        print(ls)
-        max=0.0
-        dt={"pat":[],"score":0.0}
-        for j in range(len(ls[1])-window_size+1):
-            sc=jaro(ls[1][j:j+window_size],pat)
-            #print(sc,ls[1][j:j+window_size])
-            if sc>max:
-                max=sc
-                dt["pat"]=ls[1][j:j+window_size]
-                dt["score"]=sc
-                print(dt)
+    pickle_list=pickle.load(open(pick_fl,"rb"))
+    if len(sent_list)!=len(pickle_list):
+        return "check the files: "+file_name+", "+pick_fl
+    for sn,i in enumerate(sent_list):
+        if i.strip().split(" ")[-1] in tags:
+            dt["score"]=0.0
+        else:
+            ls=pe.opt_triples(pickle_list[sn],stop_words)
+            #print(ls)
+            max1=0.0
+            dt={"pat":[],"score":0.0}
+            for j in range(len(ls[1])-window_size+1):
+                sc=pe.jaro(ls[1][j:j+window_size],pat)
+                #print(sc,ls[1][j:j+window_size])
+                if sc>max1:
+                    max1=sc
+                    dt["pat"]=ls[1][j:j+window_size]
+                    dt["score"]=sc
+                    #print(dt)
         if dt["score"]==1.0:
             flag=1
             i=i.strip()+" "+tag+" \n"
             new_list.append(i)
-        elif .87<dt["score"]<1.0:
+            tagged_sent.append(i)
+        elif pattern_score<dt["score"]<1.0:
             pat_collect.append(dt)
             new_list.append(i)
         else:
             new_list.append(i)
-    """if flag==1:
-        os.remove(file_name)
-        f=open(file_name,"a")
-        for i in new_list:
-            f.write(i)
-        f.close()"""
-    return [flag,new_list,pat_collect]
+    if flag==1:
+        try:
+            os.remove(file_name)
+        except:
+            pass
+        with open(file_name,"a") as f:
+                f.write("".join(new_list))
+        return {"tagged_sentences":tagged_sent,"partial_matched_patterns":pat_collect}
+    else:
+        return {"tagged_sentences":tagged_sent,"partial_matched_patterns":pat_collect}
 #input sd->list(1d) of patterns to be count
 #input c->count dictionary stored in pickle file:count_element.pickle
 #input tag->string (dictionary key such as arguments.pickle,facts.pickle,identify.pickle,ratio.pickle,decision.pickle)

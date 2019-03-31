@@ -345,16 +345,17 @@ def pattern_tagger(file_name,pat,tag,window_size=6,pattern_score=.87,stop_words=
     pickle_list=pickle.load(open(pick_fl,"rb"))
     if len(sent_list)!=len(pickle_list):
         return "check the files: "+file_name+", "+pick_fl
+    dt={}
     for sn,i in enumerate(sent_list):
         if i.strip().split(" ")[-1] in tags:
             dt["score"]=0.0
         else:
-            ls=pe.opt_triples(pickle_list[sn],stop_words)
+            ls=opt_triples(pickle_list[sn],stop_words)
             #print(ls)
             max1=0.0
             dt={"pat":[],"score":0.0}
             for j in range(len(ls[1])-window_size+1):
-                sc=pe.jaro(ls[1][j:j+window_size],pat)
+                sc=jaro(ls[1][j:j+window_size],pat)
                 #print(sc,ls[1][j:j+window_size])
                 if sc>max1:
                     max1=sc
@@ -484,3 +485,141 @@ def pattern_modify(pat,pat_list,tag,pat_list1):
         for i in ele:
             pat[i[1]]=i[0][1]
     return pat
+#-----------Recent one March 29 ------------
+#input pat_list->list of patterns
+#input pat->list input reference pattern from pattern position
+#output pat[0]->modified pattern
+def pattern_count_modify(pat_list,pat):
+    lst=[]
+    for i in pat[1]:
+        dct={}
+        for j in pat_list:
+            if j[i] not in dct:
+                dct[j[i]]=1
+            else:
+                dct[j[i]]=dct[j[i]]+1
+        #2print(dct)
+        lst.append([max(dct,key=lambda k: dct[k]),i])
+    #print(lst)
+    pt=[]
+    for i in lst:
+        try:
+            pat[0][i[1]]=i[0]
+        except:
+            pass
+    return pat[0]
+#input pat->list pattern which is partially matched instance
+#input ref_pat->list possible seed pattern
+#output list pattern with position change  no of elements differ from possible seed pattern
+def pattern_position(pat,ref_pat):
+    if len(pat)==len(ref_pat):
+        pos=[]
+        for i,j in enumerate(pat):
+            if pat[i]==ref_pat[i]:
+                continue
+            else:
+                pos.append(i)
+        return [pat,pos,len(pos)]
+    elif len(pat)>len(ref_pat):
+        pos=[]
+        for i,j in enumerate(ref_pat):
+            if pat[i]==ref_pat[i]:
+                continue
+            else:
+                pos.append(i)
+        pos.extend([k+len(ref_pat) for k in range(len(pat)-len(ref_pat))])
+        return [pat,pos,len(pos)]
+    else:
+        pos=[]
+        for i,j in enumerate(pat):
+            if pat[i]==ref_pat[i]:
+                continue
+            else:
+                pos.append(i)
+        pos.extend([k+len(pat) for k in range(len(ref_pat)-len(pat))])
+        return [pat,pos,len(pos)]
+#input file_name->string
+#input pat->list 1d list of patterns
+#input tag->string labl to tagged with sentence
+#input window_size->int by default 6
+#input pattern_score->float by default .87
+#input stop_words->boolean by default True
+#output dictinary or string and if changes one text file will be modified
+def opt_pattern_tagger(file_name,pat,tag,window_size=6,pattern_score=0.88888888888,stop_words=True):
+    import os
+    import pickle
+    tags=["<arguments>","<identify>","<facts>","<decision>","<ratio>"]
+    print("@"+file_name+"\n")
+    pick_fl="/home/judson/Desktop/sentenceSeg/win6_pat_pickle/"+file_name.split("/")[-1].split(".")[0]+".pickle"
+    pat_collect=[]
+    new_list=[]
+    tagged_sent=[]
+    flag=0
+    sent_list=open(file_name,"r").readlines()
+    pickle_list=pickle.load(open(pick_fl,"rb"))
+    if len(sent_list)!=len(pickle_list):
+        return "check the files: "+file_name+", "+pick_fl
+    dt={}
+    for sn,i in enumerate(sent_list):
+        if i.strip().split(" ")[-1] in tags:
+            dt["score"]=0.0
+        else:
+            ls=pickle_list[sn]
+            #print(ls)
+            max1=0.0
+            dt={"pat":[],"score":0.0}
+            for j in ls:
+                sc=jaro(j,pat)
+                #print(sc,ls[1][j:j+window_size])
+                if sc>max1:
+                    max1=sc
+                    dt["pat"]=j
+                    dt["score"]=sc
+                    #print(dt)
+        if dt["score"]==1.0:
+            flag=1
+            i=i.strip()+" "+tag+" \n"
+            new_list.append(i)
+            tagged_sent.append(i)
+        elif pattern_score<dt["score"]<1.0:
+            pat_collect.append(dt)
+            new_list.append(i)
+        else:
+            new_list.append(i)
+    if flag==1:
+        try:
+            os.remove(file_name)
+        except:
+            pass
+        with open(file_name,"a") as f:
+                f.write("".join(new_list))
+        return {"tagged_sentences":tagged_sent,"partial_matched_patterns":pat_collect}
+    else:
+        return {"tagged_sentences":tagged_sent,"partial_matched_patterns":pat_collect}
+#input pat_list->list
+#output uniq->list
+def uniq_pattern_list(pat_list):
+    uniq=[]
+    for i in pat_list:
+        if i not in uniq:
+            uniq.append(i)
+    return uniq
+#input pat_list->list
+#input unq_pat->list
+#output sfrp->list sorted frequent pattern
+def uniq_pattern_frequency(pat_list,unq_pat):
+    freq_pat=[]
+    for i in unq_pat:
+        count=0
+        for j in pat_list:
+            if i==j:
+                count=count+1
+        freq_pat.append([i,count])
+    fc=[i[1]for i in freq_pat]
+    fc=sorted(list(set(fc)),reverse=True)
+    sfrp=[]
+    for i in fc:
+        for j in freq_pat:
+            if i==j[1]:
+                sfrp.append(j)
+    return sfrp
